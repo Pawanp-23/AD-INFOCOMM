@@ -1,0 +1,54 @@
+# ---------- secrets
+.env
+.env.*
+!.env.example
+
+# ---------- python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---------- node / frontend
+node_modules/
+dist/
+frontend/coverage/
+*.tsbuildinfo
+npm-debug.log*
+
+# ---------- ML data & artifacts (keep manifests and .gitkeep)
+ml/data/raw/
+ml/data/processed/
+ml/data/cache/
+ml/artifacts/*
+!ml/artifacts/.gitkeep
+mlruns/
+wandb/
+*.onnx
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# ---------- media (never commit recordings)
+*.wav
+*.mp3
+*.mp4
+*.webm
+*.flac
+
+# ---------- notebooks
+.ipynb_checkpoints/
+
+# ---------- OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
