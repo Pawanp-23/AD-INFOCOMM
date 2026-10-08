@@ -27,6 +27,32 @@ ml/
 └── tests/
 ```
 
+## Setup
+
+```bash
+cd ml
+python -m venv .venv
+.venv\Scripts\activate                     # Windows (source .venv/bin/activate elsewhere)
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124   # or /whl/cpu
+pip install -e ".[dev]"
+pytest                                     # runs on synthetic audio, no dataset needed
+```
+
+## M0 — reproduce the baselines
+
+```bash
+python scripts/download_ravdess.py                                         # ~208 MB
+python -m ramei_ml.data.manifest --dataset ravdess=data/raw/ravdess --out ravdess_audio.csv
+python -m ramei_ml.data.manifest --dataset ravdess=data/raw/ravdess --out ravdess_audio_random.csv --strategy random
+
+python -m ramei_ml.training.baseline                                       # E0 thesis MLP
+python -m ramei_ml.training.baseline experiment=e1_cnn                     # E1 repo 1D-CNN
+python -m ramei_ml.training.baseline data=ravdess_random                   # leakage demo
+```
+
+Results: `artifacts/experiments/leaderboard.csv`, plus per-run `metrics.json`, confusion matrix,
+predictions and model under `artifacts/experiments/<experiment>__<data>/<timestamp>/`.
+
 ## Training stages
 
 | Stage | Output |

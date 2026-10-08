@@ -1,0 +1,21 @@
+# Stage S0 baselines (TRD §5). Override on the command line, e.g.:
+#   python -m ramei_ml.training.baseline experiment=e1_cnn data=ravdess_random
+defaults:
+  - data: ravdess
+  - experiment: e0_mlp
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+  - _self_
+
+seed: 42
+cv_folds: 6         # used by ramei_ml.training.cv (RAVDESS: 24 actors -> 4 per fold)
+n_jobs: -1          # feature extraction workers (-1 = all cores)
+cache_dir: null     # default: data/processed/features
+output_root: null   # default: artifacts/experiments
+
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+  job:
+    chdir: false

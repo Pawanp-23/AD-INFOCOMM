@@ -1,0 +1,5 @@
+# RAVDESS with an utterance-level RANDOM split (speakers leak across splits).
+# Used only to show how much speaker leakage inflates reported accuracy. Never report as a result.
+name: ravdess_random
+manifest: data/manifests/ravdess_audio_random.csv
+split_strategy: random

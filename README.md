@@ -18,6 +18,7 @@ Read in order:
 | 2 | [Technical Requirements (TRD)](docs/02-TRD.md) | Models, data, APIs, database, performance, security, testing |
 | 3 | [System Architecture](docs/03-System-Architecture.md) | How the components fit together, runtime flows, deployment |
 | — | [Architecture Decision Records](docs/adr/) | Why key decisions were made |
+| — | [Milestone reports](docs/reports/) | Results of each phase (start with [M0 baseline](docs/reports/M0-baseline-report.md)) |
 
 ## Architecture at a glance
 

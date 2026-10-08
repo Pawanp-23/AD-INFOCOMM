@@ -1,0 +1,56 @@
+[project]
+name = "ramei-ml"
+version = "0.1.0"
+description = "RAMEI research, training, evaluation and export"
+requires-python = ">=3.11"
+# Core: everything needed for data pipelines and the M0 baselines.
+# torch/torchaudio are installed separately so the right CUDA/CPU wheel can be chosen.
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "scikit-learn>=1.5",
+    "librosa>=0.10",
+    "soundfile>=0.12",
+    "pandas>=2.2",
+    "pyyaml>=6.0",
+    "hydra-core>=1.3",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+# M1+: pretrained encoders, ASR, face pipeline
+multimodal = [
+    "transformers>=4.44",
+    "peft>=0.12",
+    "faster-whisper>=1.0",
+    "mediapipe>=0.10",
+    "opencv-python-headless>=4.9",
+]
+tracking = ["mlflow>=2.14"]
+export = ["onnx>=1.16", "onnxruntime>=1.18"]
+dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N"]
+ignore = ["N806", "N803"]  # allow ML-conventional names like X, X_train
+
+[tool.ruff.lint.flake8-bugbear]
+# frozen dataclasses are safe as defaults
+extend-immutable-calls = [
+    "ramei_ml.features.audio.AudioConfig",
+    "ramei_ml.features.mfcc.FeatureConfig",
+]

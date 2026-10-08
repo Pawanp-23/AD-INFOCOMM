@@ -1,0 +1,10 @@
+# E0 — thesis replica: MFCC/Δ/ΔΔ + pitch + energy statistics -> MLPClassifier
+name: e0_thesis_mlp
+model: mlp
+features: stats
+mlp:
+  hidden_layer_sizes: [300]
+  alpha: 0.01
+  batch_size: 256
+  learning_rate: adaptive
+  max_iter: 500

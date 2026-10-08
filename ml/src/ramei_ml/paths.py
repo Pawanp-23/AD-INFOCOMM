@@ -1,0 +1,17 @@
+"""Canonical filesystem locations inside ml/ (independent of the current working directory)."""
+
+from pathlib import Path
+
+ML_ROOT = Path(__file__).resolve().parents[2]
+CONFIG_DIR = ML_ROOT / "configs"
+DATA_DIR = ML_ROOT / "data"
+RAW_DIR = DATA_DIR / "raw"
+PROCESSED_DIR = DATA_DIR / "processed"
+MANIFEST_DIR = DATA_DIR / "manifests"
+ARTIFACTS_DIR = ML_ROOT / "artifacts"
+
+
+def resolve(path: str | Path) -> Path:
+    """Resolve a config path: absolute paths are kept, relative ones are taken from ml/."""
+    p = Path(path)
+    return p if p.is_absolute() else ML_ROOT / p

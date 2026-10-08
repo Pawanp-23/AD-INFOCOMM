@@ -1,0 +1,4 @@
+# RAVDESS speech (audio-only), speaker-independent split, stratified by gender.
+name: ravdess
+manifest: data/manifests/ravdess_audio.csv
+split_strategy: speaker
