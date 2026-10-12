@@ -36,6 +36,16 @@ DATASET_LABEL_MAPS: dict[str, dict[str, str | None]] = {
         "disgust": "disgust",
         "ps": "surprise",  # pleasant surprise
     },
+    # MELD utterance emotion (Friends TV dialogues)
+    "meld": {
+        "neutral": "neutral",
+        "joy": "happy",
+        "sadness": "sad",
+        "anger": "angry",
+        "fear": "fear",
+        "disgust": "disgust",
+        "surprise": "surprise",
+    },
     # SAVEE emotion prefix
     "savee": {
         "n": "neutral",

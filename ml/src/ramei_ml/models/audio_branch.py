@@ -39,7 +39,7 @@ class AudioBranch(nn.Module):
         self.cfg = cfg
         # LayerDrop must be off: the layer-weighted sum needs every hidden state on every step
         if cfg.pretrained:
-            encoder = WavLMModel.from_pretrained(cfg.pretrained, layerdrop=0.0)
+            encoder = WavLMModel.from_pretrained(cfg.pretrained, layerdrop=0.0, dtype=torch.float32)
         else:
             encoder = WavLMModel(WavLMConfig(**{**(cfg.encoder_config or {}), "layerdrop": 0.0}))
         encoder.freeze_feature_encoder()  # CNN front-end is never fine-tuned

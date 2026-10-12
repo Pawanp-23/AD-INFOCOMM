@@ -52,3 +52,11 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# ---------- backend local state (never commit)
+backend/.dev-credentials
+backend/ramei.db*
+backend/uploads/
+
+# ---------- downloaded model files (fetched by scripts, never committed)
+ml/data/models/
