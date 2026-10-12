@@ -15,6 +15,22 @@ import numpy as np
 from ramei_ml.paths import DATA_DIR
 
 DETECTOR_PATH = DATA_DIR / "models" / "blaze_face_short_range.tflite"
+DETECTOR_URL = (
+    "https://storage.googleapis.com/mediapipe-models/face_detector/"
+    "blaze_face_short_range/float16/1/blaze_face_short_range.tflite"
+)
+
+
+def ensure_detector(path: Path = DETECTOR_PATH) -> Path:
+    """Download the MediaPipe BlazeFace model (~230 KB, Apache-2.0) on first use."""
+    if not path.exists():
+        import urllib.request
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".part")
+        urllib.request.urlretrieve(DETECTOR_URL, tmp)  # noqa: S310 - fixed https URL
+        tmp.replace(path)
+    return path
 
 
 @dataclass(frozen=True)
@@ -37,7 +53,7 @@ class FaceDetector:
 
         self._mp = mp
         options = vision.FaceDetectorOptions(
-            base_options=BaseOptions(model_asset_path=str(model_path)),
+            base_options=BaseOptions(model_asset_path=str(ensure_detector(model_path))),
             min_detection_confidence=min_confidence,
         )
         self._detector = vision.FaceDetector.create_from_options(options)
