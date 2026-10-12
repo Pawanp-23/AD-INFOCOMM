@@ -95,14 +95,29 @@ class FaceEncoder:
         self.order = [vit_labels.index(e) for e in EMOTIONS]  # ViT label order -> RAMEI order
 
     @torch.no_grad()
+    def encode_frames(
+        self, frames: np.ndarray, batch_size: int = 128
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """frames uint8 [M, 224, 224, 3] RGB -> (cls [M, 768], logits [M, 7] in RAMEI order)."""
+        cls, logits = [], []
+        for i in range(0, len(frames), batch_size):
+            x = torch.from_numpy(frames[i : i + batch_size]).to(self.device)
+            x = x.permute(0, 3, 1, 2).to(self.dtype) / 127.5 - 1.0
+            out = self.model(pixel_values=x, output_hidden_states=True)
+            cls.append(out.hidden_states[-1][:, 0].float().cpu().numpy())
+            logits.append(out.logits.float().cpu().numpy()[:, self.order])
+        return np.concatenate(cls), np.concatenate(logits)
+
+    @staticmethod
+    def quality(
+        crops: np.ndarray, present: np.ndarray, det_conf: np.ndarray, face_area: np.ndarray
+    ) -> np.ndarray:
+        blur, bright = crops_blur_brightness(crops)
+        return visual_quality(present.astype(float), det_conf, face_area, blur, bright)
+
     def __call__(
         self, crops: np.ndarray, present: np.ndarray, det_conf: np.ndarray, face_area: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """crops uint8 [N, 224, 224, 3] RGB; present/det_conf/face_area per frame [N]."""
-        blur, bright = crops_blur_brightness(crops)
-        quality = visual_quality(present.astype(float), det_conf, face_area, blur, bright)
-        x = torch.from_numpy(crops).to(self.device).permute(0, 3, 1, 2).to(self.dtype)
-        out = self.model(pixel_values=x / 127.5 - 1.0, output_hidden_states=True)
-        cls = out.hidden_states[-1][:, 0].float().cpu().numpy()
-        logits = out.logits.float().cpu().numpy()[:, self.order]
-        return cls, logits, quality
+        cls, logits = self.encode_frames(crops)
+        return cls, logits, self.quality(crops, present, det_conf, face_area)

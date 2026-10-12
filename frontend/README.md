@@ -1,56 +1,48 @@
 # frontend/
 
-RAMEI web dashboard — **React 18 + Vite 5 + TypeScript**, Tailwind CSS + shadcn/ui, React Router.
-Spec: [TRD §9](../docs/02-TRD.md#9-frontend-specification) · Screens: [PRD §9](../docs/01-PRD.md#9-user-experience-overview).
+RAMEI web dashboard — **React 18 + Vite 5 + TypeScript**, Tailwind CSS, React Router, TanStack
+Query, Recharts. Spec: [TRD §9](../docs/02-TRD.md#9-frontend-specification) · Screens:
+[PRD §9](../docs/01-PRD.md#9-user-experience-overview).
 
 ```
 frontend/
-├── public/                     # static assets copied as-is
-├── index.html                  # Vite entry HTML
+├── index.html                  # entry HTML (fonts, theme bootstrap)
 ├── src/
 │   ├── main.tsx                # React root
-│   ├── app/                    # app shell: App.tsx, router.tsx, providers (Query, theme, auth), route guards
-│   ├── pages/                  # route screens: Login, Dashboard, LiveSession, Upload, SessionReport, Admin
+│   ├── app/App.tsx             # providers, router, protected routes, code splitting
+│   ├── pages/                  # Login, Dashboard, Sessions, Upload, Live, SessionReport, System
 │   ├── components/
-│   │   ├── ui/                 # shadcn/ui primitives
-│   │   ├── charts/             # EmotionTimeline, ValenceArousalChart, ReliabilityBars
-│   │   └── layout/             # shell, sidebar, header
-│   ├── features/               # feature modules (components + hooks + logic per feature)
-│   │   ├── live-session/
-│   │   ├── session-report/
-│   │   ├── upload/
-│   │   ├── explain/
-│   │   └── admin/
-│   ├── hooks/                  # useStream, useMediaCapture, useAuth
-│   ├── lib/                    # api-client, ws-client, env, utils
-│   ├── services/               # typed API calls per resource
-│   ├── store/                  # Zustand stores (live session state)
-│   ├── styles/                 # globals, theme tokens
-│   └── types/                  # generated from backend OpenAPI — do not edit by hand
-└── tests/                      # Vitest + React Testing Library; Playwright e2e
+│   │   ├── ui/primitives.tsx   # Button, Card, Badge, EmotionChip, Meter, Skeleton, Empty/Error states
+│   │   ├── charts/charts.tsx   # emotion timeline, reliability, valence/arousal, distribution
+│   │   └── layout/AppShell.tsx # sidebar shell, page header/body
+│   ├── features/
+│   │   ├── live-session/       # useLiveSession: mic (AudioWorklet, PCM16 @16 kHz) + camera -> WebSocket
+│   │   └── session-report/     # SegmentInspector (explain panel), TranscriptList
+│   ├── hooks/                  # useTheme
+│   ├── lib/                    # api client, auth context, emotion palette, formatting
+│   ├── styles/index.css        # design tokens (light + dark)
+│   └── types/api.ts            # API types (mirror backend schemas)
+└── public/                     # favicon
 ```
 
-## Rules
+## Design system
 
-- Pages stay thin: they compose feature modules. Feature code lives in `features/<name>`;
-  only truly shared pieces go in `components/`.
-- API types are generated from the backend OpenAPI schema (`openapi-typescript`), never hand-written.
-- Only `VITE_*` environment variables reach the browser — never put secrets in them.
-- Emotion colors must always be paired with a text label (color-blind safety, WCAG 2.1 AA).
+- Neutral slate surfaces, a single teal accent, 1px borders instead of shadows, Inter + JetBrains Mono.
+- Emotion colours use the Okabe–Ito colour-blind-safe palette and are always paired with a text label.
+- Tokens are CSS variables (`src/styles/index.css`) with light and dark themes; Tailwind maps to them.
+- Every data view has loading (skeleton), empty and error states; focus rings and reduced-motion support.
 
-## Configuration
-
-| Variable | Example |
-|---|---|
-| `VITE_API_URL` | `http://localhost:8000/api/v1` |
-| `VITE_WS_URL` | `ws://localhost:8000/api/v1/stream` |
-
-In development the Vite dev server proxies `/api` (HTTP and WebSocket) to the backend.
-In production `vite build` produces `dist/`, served by the Nginx proxy with SPA fallback.
-
-## Initialize (milestone M3)
+## Develop
 
 ```bash
-npm create vite@5 . -- --template react-ts
-npm install react-router-dom @tanstack/react-query zustand recharts
+npm install
+npm run dev        # http://localhost:5173 — proxies /api (HTTP + WebSocket) to http://127.0.0.1:8000
+npm run build      # type-check + production build into dist/
 ```
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `VITE_API_URL` | `/api/v1` | REST base URL |
+| `VITE_WS_URL` | same host `/api/v1/stream` | WebSocket base URL |
+
+Only `VITE_*` variables reach the browser — never put secrets in them.

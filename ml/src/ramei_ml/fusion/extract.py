@@ -150,39 +150,56 @@ def extract_text(clips: pd.DataFrame) -> None:
 
 
 # ----------------------------------------------------------------------------- visual
-def extract_visual(clips: pd.DataFrame) -> None:
+def _load_visual(stem: str, variant: str, seed: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Load one clip's crops, apply the variant's corruption, compute quality (CPU work)."""
     from ramei_ml.features.video import load_faces
 
+    crops, q = load_faces(FACES / stem)
+    present = np.array(q["face_present"]) > 0
+    rng = np.random.default_rng(seed)
+    if variant == "blur":
+        crops = blur_faces(crops)
+    elif variant == "dark":
+        crops = darken_faces(crops, rng=rng)
+    elif variant == "occlude":
+        crops = occlude_faces(crops, rng)
+    quality = FaceEncoder.quality(crops, present, np.array(q["det_conf"]), np.array(q["face_area"]))
+    return crops, present, quality
+
+
+def extract_visual(clips: pd.DataFrame, clips_per_batch: int = 8) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
     encoder = FaceEncoder(DEVICE)
-    for variant in VISUAL_VARIANTS:
-        if (STORE / f"visual_{variant}.npz").exists():
-            continue
-        cls, logits, masks, quality = [], [], [], []
-        rng = np.random.default_rng(0)
-        for i, stem in enumerate(clips["stem"]):
-            crops, q = load_faces(FACES / stem)
-            present = np.array(q["face_present"]) > 0
-            if variant == "blur":
-                crops = blur_faces(crops)
-            elif variant == "dark":
-                crops = darken_faces(crops, rng=rng)
-            elif variant == "occlude":
-                crops = occlude_faces(crops, rng)
-            c, lg, qv = encoder(crops, present, np.array(q["det_conf"]), np.array(q["face_area"]))
-            cls.append(c)
-            logits.append(lg)
-            masks.append(present)
-            quality.append(qv)
-            if (i + 1) % 1000 == 0:
-                print(f"  visual/{variant}: {i + 1}/{len(clips)}", flush=True)
-        _save(
-            f"visual_{variant}",
-            cls=np.stack(cls).astype(np.float16),
-            logits=np.stack(logits),
-            mask=np.stack(masks),
-            quality=np.stack(quality),
-        )
-        print(f"saved visual_{variant}", flush=True)
+    stems = clips["stem"].tolist()
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        for variant in VISUAL_VARIANTS:
+            if (STORE / f"visual_{variant}.npz").exists():
+                continue
+            cls, logits, masks, quality = [], [], [], []
+            for start in range(0, len(stems), clips_per_batch):
+                idx = range(start, min(start + clips_per_batch, len(stems)))
+                loaded = list(
+                    pool.map(_load_visual, [stems[i] for i in idx], [variant] * len(idx), idx)
+                )
+                frames = np.concatenate([c for c, _, _ in loaded])
+                c, lg = encoder.encode_frames(frames)
+                n = loaded[0][0].shape[0]
+                for k, (_, present, q) in enumerate(loaded):
+                    cls.append(c[k * n : (k + 1) * n])
+                    logits.append(lg[k * n : (k + 1) * n])
+                    masks.append(present)
+                    quality.append(q)
+                if (start // clips_per_batch) % 125 == 0:
+                    print(f"  visual/{variant}: {start}/{len(stems)}", flush=True)
+            _save(
+                f"visual_{variant}",
+                cls=np.stack(cls).astype(np.float16),
+                logits=np.stack(logits),
+                mask=np.stack(masks),
+                quality=np.stack(quality),
+            )
+            print(f"saved visual_{variant}", flush=True)
 
 
 def main() -> None:
