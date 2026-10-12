@@ -1,0 +1,7 @@
+# RAVDESS (24 actors) + CREMA-D (91 actors) speech audio; speaker-independent, stratified by
+# dataset x gender. Build with:
+#   python -m ramei_ml.data.manifest --dataset ravdess=data/raw/ravdess \
+#       --dataset crema_d=data/raw/crema_d --out ravdess_crema_audio.csv
+name: ravdess_crema
+manifest: data/manifests/ravdess_crema_audio.csv
+split_strategy: speaker

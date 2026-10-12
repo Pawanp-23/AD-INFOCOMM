@@ -1,0 +1,10 @@
+# E2a — audio branch ablation: frozen WavLM-Base+ (only layer weights, pooling and head train)
+defaults:
+  - e2_audio_lora
+  - _self_
+
+name: e2a_audio_wavlm_frozen
+model:
+  mode: frozen
+train:
+  lr_head: 0.001

@@ -8,7 +8,13 @@ from ramei_ml.data.manifest import (
     build_manifest,
     split_summary,
 )
-from ramei_ml.data.parsers import parse_crema_d, parse_ravdess, parse_savee, parse_tess
+from ramei_ml.data.parsers import (
+    parse_crema_d,
+    parse_ravdess,
+    parse_savee,
+    parse_tess,
+    scan_dataset,
+)
 
 
 def test_label_space_has_seven_classes() -> None:
@@ -77,3 +83,20 @@ def test_random_split_leaks_speakers(synthetic_ravdess: Path) -> None:
     df = build_manifest({"ravdess": synthetic_ravdess}, strategy="random", seed=1)
     with pytest.raises(AssertionError):
         assert_speaker_independent(df)
+
+
+def test_crema_d_scan_reads_genders_from_demographics(tmp_path: Path) -> None:
+    import soundfile as sf
+
+    audio = tmp_path / "AudioWAV"
+    audio.mkdir()
+    for name in ("1001_DFA_ANG_XX.wav", "1002_IEO_HAP_HI.wav", "1003_ITH_CAL_XX.wav"):
+        sf.write(audio / name, [0.0] * 160, 16_000)
+    (tmp_path / "VideoDemographics.csv").write_text(
+        "ActorID,Age,Sex,Race,Ethnicity\n1001,51,Male,Caucasian,Not Hispanic\n"
+        "1002,21,Female,Caucasian,Not Hispanic\n"
+    )
+    records = {r.speaker_id: r for r in scan_dataset("crema_d", tmp_path)}
+    assert set(records) == {"crema_d:1001", "crema_d:1002"}  # CAL is not a CREMA-D emotion
+    assert records["crema_d:1001"].gender == "male"
+    assert records["crema_d:1002"].gender == "female"

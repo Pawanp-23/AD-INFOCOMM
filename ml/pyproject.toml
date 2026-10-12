@@ -18,7 +18,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# M1+: pretrained encoders, ASR, face pipeline
+# M1 audio branch: pretrained speech encoder + LoRA
+audio = ["transformers>=4.44", "peft>=0.12"]
+# M1+ text and visual branches: ASR, text encoder, face pipeline
 multimodal = [
     "transformers>=4.44",
     "peft>=0.12",

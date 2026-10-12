@@ -45,6 +45,6 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libsndfile1
       - name: Install CPU PyTorch
         run: pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev,audio]"
       - run: ruff check .
       - run: pytest -q

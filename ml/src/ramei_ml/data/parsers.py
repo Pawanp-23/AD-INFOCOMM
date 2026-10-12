@@ -4,9 +4,11 @@ Each parser takes a file path and returns a ``Record`` or ``None`` (file not usa
 Speaker ids are prefixed with the dataset name so they are globally unique.
 """
 
+import csv
 import re
 from collections.abc import Callable, Iterator
 from dataclasses import asdict, dataclass
+from functools import partial
 from pathlib import Path
 
 from ramei_ml.data.labels import map_label
@@ -129,14 +131,29 @@ PARSERS: dict[str, Callable[[Path], Record | None]] = {
 }
 
 
+def load_crema_d_genders(root: Path) -> dict[str, str]:
+    """Actor id -> "male"/"female" from CREMA-D's VideoDemographics.csv (empty if absent)."""
+    csv_path = next(root.rglob("VideoDemographics.csv"), None)
+    if csv_path is None:
+        return {}
+    genders = {}
+    for row in csv.DictReader(csv_path.open(encoding="utf-8-sig")):
+        sex = row.get("Sex", "").strip().lower()
+        if sex in ("male", "female"):
+            genders[row["ActorID"].strip()] = sex
+    return genders
+
+
 def scan_dataset(name: str, root: Path, media: str | None = "audio") -> Iterator[Record]:
     """Yield records for every parseable file under ``root`` (optionally filtered by media)."""
     try:
         parser = PARSERS[name]
     except KeyError as exc:
         raise ValueError(f"No parser for dataset '{name}'. Known: {sorted(PARSERS)}") from exc
+    if name == "crema_d":
+        parser = partial(parse_crema_d, genders=load_crema_d_genders(root))
     for path in sorted(root.rglob("*")):
-        if not path.is_file():
+        if ".git" in path.parts or not path.is_file():
             continue
         record = parser(path)
         if record is not None and (media is None or record.media == media):

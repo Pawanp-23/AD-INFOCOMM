@@ -107,6 +107,7 @@ annotations) and normalized to [-1, 1].
 | Input | 16 kHz waveform, ≤ 8 s |
 | Encoder | `microsoft/wavlm-base-plus` (alt: `emotion2vec_base`) |
 | Adaptation | LoRA (r=8, α=16) on attention projections; layer-weighted sum of hidden states |
+| Encoder settings | CNN feature encoder frozen; LayerDrop disabled (the layer-weighted sum needs all 13 hidden states every step); zero-padded input without attention mask (group-norm WavLM), padding masked in pooling |
 | Pooling | Attentive statistics pooling → 768-d `z_a` |
 | Head | Linear(768→256) → GELU → Dropout(0.2) → Linear(256→7) |
 | Output | `z_a ∈ R^768`, logits `ℓ_a ∈ R^7` |

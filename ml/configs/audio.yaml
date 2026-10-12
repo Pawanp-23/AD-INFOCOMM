@@ -1,0 +1,24 @@
+# Stage S1 — audio branch (TRD §4.1). Examples:
+#   python -m ramei_ml.training.audio_branch
+#   python -m ramei_ml.training.audio_branch experiment=e2_audio_frozen
+#   python -m ramei_ml.training.audio_branch data=ravdess_crema cv_folds=4
+defaults:
+  - data: ravdess
+  - experiment: e2_audio_lora
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+  - _self_
+
+seed: 42
+n_jobs: -1          # waveform caching workers
+cv_folds: 6         # 1 = use the manifest's own split
+max_folds: null     # run only the first N folds (quick checks)
+cache_dir: null     # default: data/processed/wave16k
+output_root: null   # default: artifacts/experiments
+
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+  job:
+    chdir: false
