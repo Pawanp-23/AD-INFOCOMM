@@ -170,5 +170,32 @@ def start_analysis(session_id: str, path: Path) -> None:
     t.start()
 
 
+def recover_interrupted() -> int:
+    """Close out sessions left mid-flight by a server restart (jobs and streams are in-process).
+
+    Live sessions keep whatever was captured; uploads cannot resume because raw media is
+    deleted by default, so they are marked failed with a clear reason.
+    """
+    with SessionLocal() as db:
+        stuck = (
+            db.query(AnalysisSession)
+            .filter(AnalysisSession.status.in_(("queued", "processing")))
+            .all()
+        )
+        to_finalize = []
+        for s in stuck:
+            if s.mode == "live" and s.segments:
+                to_finalize.append(s.id)
+            else:
+                s.status = "failed"
+                s.error_message = "Interrupted by a server restart; please run it again."
+        db.commit()
+    for session_id in to_finalize:
+        finalize(session_id)
+    if stuck:
+        log.warning("Recovered %d session(s) interrupted by a restart", len(stuck))
+    return len(stuck)
+
+
 def running_jobs() -> int:
     return len(_jobs)

@@ -11,6 +11,7 @@ from app.api.v1.router import api_router
 from app.api.v1.routes.sessions import cleanup_uploads
 from app.core.config import get_settings
 from app.db.session import init_db
+from app.services.analysis import recover_interrupted
 
 
 @asynccontextmanager
@@ -21,6 +22,7 @@ async def lifespan(_: FastAPI):
     )
     init_db()
     cleanup_uploads()
+    recover_interrupted()
     if settings.load_models_on_startup:
         from app.inference.engine import InferenceEngine
 

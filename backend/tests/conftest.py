@@ -47,3 +47,11 @@ def auth(client: TestClient, email: str) -> dict[str, str]:
     r = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
     assert r.status_code == 200, r.text
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+@pytest.fixture(autouse=True)
+def _fresh_login_limiter() -> None:
+    """Each test starts with a full login token bucket (the limiter is process-global)."""
+    from app.services.rate_limit import limiter
+
+    limiter._buckets.clear()

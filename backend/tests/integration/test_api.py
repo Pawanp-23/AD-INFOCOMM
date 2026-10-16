@@ -107,3 +107,44 @@ def test_security_headers(client: TestClient) -> None:
     assert r.headers["X-Content-Type-Options"] == "nosniff"
     assert r.headers["X-Frame-Options"] == "DENY"
     assert r.headers["Cache-Control"] == "no-store"
+
+
+def test_restart_recovers_interrupted_sessions(client: TestClient) -> None:
+    from app.db.models import AnalysisSession, Segment
+    from app.db.session import SessionLocal
+    from app.services.analysis import recover_interrupted
+
+    h = auth(client, "agent1@test.io")
+    ids = {}
+    for name, mode in (("upload", "upload"), ("live_empty", "live"), ("live_data", "live")):
+        r = client.post("/api/v1/sessions", headers=h, json={"mode": mode, "consent": True})
+        ids[name] = r.json()["id"]
+    mods = {
+        m: {"available": True, "reliability": 0.8, "weight": 1 / 3, "emotion": "happy"}
+        for m in ("audio", "text", "visual")
+    }
+    with SessionLocal() as db:
+        for sid in ids.values():
+            db.get(AnalysisSession, sid).status = "processing"
+        db.add(
+            Segment(
+                session_id=ids["live_data"],
+                idx=0,
+                start_ms=0,
+                end_ms=3000,
+                emotion="happy",
+                confidence=0.9,
+                valence=0.6,
+                probabilities={"happy": 0.9},
+                modalities=mods,
+            )
+        )
+        db.commit()
+
+    assert recover_interrupted() == 3
+    status = {k: client.get(f"/api/v1/sessions/{v}", headers=h).json() for k, v in ids.items()}
+    assert status["upload"]["status"] == "failed"
+    assert "restart" in status["upload"]["error_message"]
+    assert status["live_empty"]["status"] == "failed"
+    assert status["live_data"]["status"] == "completed"  # captured segments are kept
+    assert status["live_data"]["summary"]["dominant"] == "happy"
