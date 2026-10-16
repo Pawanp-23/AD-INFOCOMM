@@ -1,0 +1,11 @@
+{
+  "name": "ramei-report-builder",
+  "private": true,
+  "description": "Builds docs/reports/RAMEI-Final-Report.docx from docs/reports/Final-Report.md",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "docx": "9.8.1"
+  }
+}
