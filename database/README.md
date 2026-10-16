@@ -1,31 +1,26 @@
 # database/
 
-Everything about RAMEI's persistent data model (PostgreSQL 16).
+RAMEI's persistent data model.
 
 ```
 database/
-├── schema/schema.sql   # human-readable reference DDL (kept in sync with migrations)
-├── migrations/         # Alembic environment + versioned migrations (source of truth)
-│   └── versions/
-├── seeds/              # development seed data — never real users or recordings
-└── docs/               # data dictionary, ER notes
+└── schema/schema.sql   # human-readable reference DDL for PostgreSQL 16
 ```
+
+## How the schema is managed
+
+- **Source of truth:** the SQLAlchemy models in [`backend/app/db/models`](../backend/app/db/models/__init__.py).
+  The API creates any missing tables on startup (`init_db`), for SQLite (default) and PostgreSQL alike.
+- **`schema/schema.sql`** documents the same tables, indexes and constraints for reviewers and DBAs.
+  Update it in the same change as the models.
+- **Users** are created with the backend CLI, never with SQL seeds:
+  `python -m app.cli create-user --email admin@ramei.local --role admin`.
+- Alembic migrations are the production path once the schema must evolve on live data
+  (`pip install -e "backend[postgres]"` ships Alembic); see [ADR-0008](../docs/adr/0008-local-first-implementation-choices.md).
 
 ## Rules
 
-- **Schema changes go through Alembic migrations only.** Update `schema/schema.sql` in the same PR.
-- Migrations must be reversible (`downgrade()` implemented).
-- Never commit real user data, transcripts or recordings.
-
-## Local usage
-
-The Postgres container in the root `docker-compose.yml` loads `schema/schema.sql` and
-`seeds/` automatically on first start (empty volume):
-
-```bash
-docker compose up -d postgres
-```
-
-To reset: `docker compose down -v` (removes the volume), then start again.
+- Never commit real user data, transcripts or recordings (raw media is not persisted by default).
+- Local database files (`backend/ramei.db*`) are git-ignored.
 
 Entity relationships and retention policy: [`docs/03-System-Architecture.md` §8](../docs/03-System-Architecture.md#8-data-architecture).
