@@ -33,3 +33,16 @@ for unavailable modalities. Keep reliability-weighted late fusion (F1) as the ba
 - Positive: input-adaptive trust, exact missing-modality handling, per-segment weights for explanations.
 - Negative: requires a separately trained reliability module and corruption-augmented training data.
 - Follow-up: ablations E9–E11 (TRD §6.2) must show each component's contribution.
+
+## Outcome (2026-10-16, M2)
+
+Measured on CREMA-D, 5-fold speaker-independent CV ([M2 report](../reports/M2-fusion-report.md) §3-4):
+
+- The fusion transformer beats static averaging by 4.8 macro-F1 points and stays within a 10% drop
+  under every corruption. The decision to use a learned, masking-based fusion stands.
+- The `β·log(r_k)` attention bias (ablation E9) gave **no measurable gain**: E9 matched E8 in all
+  12 scenarios. Robustness comes from corruption + modality-dropout training (E10 collapses
+  without it). The reliability estimates still track degradation and drive explanations,
+  abstention and conflict rules, so the module is kept.
+- Revisit the bias on conversational data where no single modality dominates (IEMOCAP or
+  MSP-Podcast); on CREMA-D the face receives ~84% of the weight.

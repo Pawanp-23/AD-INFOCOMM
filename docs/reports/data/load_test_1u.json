@@ -1,0 +1,21 @@
+{
+  "users": 1,
+  "seconds": 30.0,
+  "requests": 2704,
+  "rps": 90.1,
+  "error_rate": 0.0,
+  "status_codes": {
+    "200": 2704
+  },
+  "latency_ms": {
+    "p50": 10.3,
+    "p95": 18.4,
+    "p99": 22.4
+  },
+  "per_endpoint_p95_ms": {
+    "/health": 14.5,
+    "/auth/me": 14.5,
+    "/sessions?limit=20": 21.5,
+    "/dashboard/stats": 18.1
+  }
+}

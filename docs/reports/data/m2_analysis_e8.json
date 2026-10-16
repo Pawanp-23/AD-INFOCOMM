@@ -1,0 +1,137 @@
+{
+ "experiment": "e8_rgcmt",
+ "threshold": 0.45,
+ "scenarios": {
+  "clean": {
+   "macro_f1_pooled": 0.7687,
+   "macro_f1_by_gender": {
+    "female": 0.7957,
+    "male": 0.7445
+   },
+   "accuracy_all": 0.7686,
+   "coverage": 0.9575,
+   "selective_accuracy": 0.7861,
+   "abstained_accuracy": 0.3734
+  },
+  "noisy_room_0db": {
+   "macro_f1_pooled": 0.7151,
+   "macro_f1_by_gender": {
+    "female": 0.736,
+    "male": 0.6968
+   },
+   "accuracy_all": 0.7167,
+   "coverage": 0.9278,
+   "selective_accuracy": 0.7432,
+   "abstained_accuracy": 0.3762
+  },
+  "visual_dark": {
+   "macro_f1_pooled": 0.6989,
+   "macro_f1_by_gender": {
+    "female": 0.7163,
+    "male": 0.6833
+   },
+   "accuracy_all": 0.6993,
+   "coverage": 0.9252,
+   "selective_accuracy": 0.7272,
+   "abstained_accuracy": 0.3537
+  },
+  "camera_off": {
+   "macro_f1_pooled": 0.5944,
+   "macro_f1_by_gender": {
+    "female": 0.5955,
+    "male": 0.5934
+   },
+   "accuracy_all": 0.5966,
+   "coverage": 0.7233,
+   "selective_accuracy": 0.6738,
+   "abstained_accuracy": 0.3949
+  },
+  "noisy_room_camera_off": {
+   "macro_f1_pooled": 0.4687,
+   "macro_f1_by_gender": {
+    "female": 0.4644,
+    "male": 0.4708
+   },
+   "accuracy_all": 0.4768,
+   "coverage": 0.5421,
+   "selective_accuracy": 0.5811,
+   "abstained_accuracy": 0.3533
+  }
+ },
+ "confusion_clean": {
+  "labels": [
+   "neutral",
+   "happy",
+   "sad",
+   "angry",
+   "fear",
+   "disgust",
+   "surprise"
+  ],
+  "matrix": [
+   [
+    843,
+    27,
+    106,
+    39,
+    37,
+    35,
+    0
+   ],
+   [
+    18,
+    1164,
+    5,
+    24,
+    33,
+    27,
+    0
+   ],
+   [
+    121,
+    14,
+    801,
+    10,
+    157,
+    168,
+    0
+   ],
+   [
+    39,
+    16,
+    8,
+    1071,
+    72,
+    65,
+    0
+   ],
+   [
+    32,
+    18,
+    250,
+    55,
+    837,
+    79,
+    0
+   ],
+   [
+    24,
+    28,
+    110,
+    56,
+    49,
+    1004,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  ]
+ }
+}

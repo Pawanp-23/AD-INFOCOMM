@@ -13,8 +13,8 @@ Speech emotion recognition systems built on a single signal are brittle: they fa
 voice is noisy or flat and they give no indication of when they are wrong. This project
 started from an audio-only baseline (MFCC features with an MLP or 1D-CNN) and evolved it into
 RAMEI, a multimodal system that recognizes emotion from voice, words and face together,
-estimates how reliable each signal is for every segment, and shifts trust toward the reliable
-ones. Every prediction carries a calibrated confidence, an explicit "uncertain" outcome instead
+estimates how reliable each signal is for every segment, and is trained to keep working when
+signals are noisy, degraded or missing. Every prediction carries a calibrated confidence, an explicit "uncertain" outcome instead
 of a forced guess, and a plain-language explanation.
 
 Re-evaluating the baseline with a speaker-independent protocol showed that its reported ~70%
@@ -22,8 +22,13 @@ accuracy depends on speaker leakage; on unseen speakers it reaches a macro-F1 of
 A WavLM-based audio branch raises this to 0.69-0.70 (+17 to +19 points), a DeBERTa text
 branch reaches a weighted-F1 of 0.59 on MELD, and a ViT face branch completes the three
 modalities. The reliability-gated fusion model, evaluated with 5-fold speaker-independent
-cross-validation on CREMA-D (91 actors) under clean, noisy and missing-modality conditions,
-[PENDING M2: headline fused result and robustness numbers].
+cross-validation on CREMA-D (91 actors), reaches a macro-F1 of 0.769 — 17.7 points above
+audio alone on the same speakers — with a calibration error of 0.044. It stays within a 10%
+drop under every tested corruption (noise, blur, darkness, occlusion, unreliable speech
+recognition), and abstains more as conditions worsen: segments it commits to are 79%
+accurate, those it marks "uncertain" only 37%. An ablation shows that this robustness comes
+from training on corrupted and missing inputs, not from the explicit reliability bias in the
+fusion attention, which added no measurable accuracy.
 
 The models are delivered as a working platform: a FastAPI service with authentication,
 role-based access, file upload and live WebSocket streaming, and a React dashboard with
@@ -76,7 +81,7 @@ The internship started from two audio-only artefacts:
 - A reliability-gated fusion model trained with corruption and modality-dropout augmentation,
   plus ablations isolating the effect of reliability.
 - An end-to-end platform (FastAPI + React) with explanations, alerts and summaries.
-- Engineering practice: architecture decision records, CI, 60 automated tests, container images.
+- Engineering practice: architecture decision records, CI, 62 automated tests, container images.
 
 ## 1.5 Report structure
 
@@ -270,7 +275,7 @@ keeps the same interfaces, so the production path stays open.
 
 - **Documentation:** PRD, TRD, system architecture document, architecture decision records,
   and a report per milestone.
-- **Tests:** 60 automated tests (37 ML, 18 backend, 5 frontend) that run without datasets.
+- **Tests:** 62 automated tests (38 ML, 19 backend, 5 frontend) that run without datasets.
 - **CI:** GitHub Actions runs linting, type-checking, tests and the frontend build on every push.
 
 # 5. Results
@@ -314,26 +319,126 @@ On unseen speakers the honest figure is 0.51-0.55, and confidence is badly misca
 
 ## 5.3 Reliability-gated fusion (M2)
 
-[PENDING M2: table of macro-F1 per experiment (E5, E6, E8, E9, E10, branch-only) per
-scenario, 5-fold CV on CREMA-D]
+CREMA-D has six emotions (no surprise), so macro-F1 here is over six classes: comparisons
+within this section are like-for-like, comparisons with the 7-class RAVDESS results are
+indicative. Full details are in the M2 report.
 
-[PENDING M2: robustness: relative drop from clean per scenario versus the NFR-04 target of
-≤ 10%]
+| Model (clean input) | Macro-F1 | ECE |
+|---|---|---|
+| Audio branch alone | 0.592 ± 0.033 | — |
+| Visual branch alone | 0.610 ± 0.015 | — |
+| Text branch alone | 0.135 ± 0.005 | — |
+| E5: equal-weight average | 0.721 ± 0.028 | — |
+| E6: reliability-weighted late fusion | 0.717 ± 0.024 | — |
+| **E8: RAMEI** | **0.769 ± 0.023** | **0.044** |
 
-[PENDING M2: calibration: ECE raw and calibrated versus the NFR-05 target of ≤ 0.05;
-abstention rate and selective accuracy]
+*CREMA-D, 5-fold speaker-independent cross-validation.*
 
-[PENDING M2: fairness: female versus male macro-F1 gap versus the NFR-09 target of
-≤ 5 points]
+Fusion adds 17.7 points over audio alone and 15.9 over the best single modality, meeting the
+"baseline + 10 points" criterion (NFR-03), and 4.8 points over simple averaging. Text is near
+chance because every CREMA-D actor reads the same 12 neutral sentences; the model learned
+this and gives text about 3% of the weight.
 
-[PENDING M2: reliability analysis: mean r_m per scenario showing that trust moves away from
-the corrupted modality]
+### Robustness
+
+| Scenario | E8 RAMEI | Drop | E9 no reliability bias | E10 clean-only training |
+|---|---|---|---|---|
+| Clean | **0.769** | — | 0.766 | 0.737 |
+| Audio noise 10 dB | 0.752 | 2.3% | 0.756 | 0.583 |
+| Noisy room 0 dB | 0.715 | 7.0% | 0.719 | 0.384 |
+| Face blurred | 0.723 | 5.9% | 0.733 | 0.587 |
+| Face dark | 0.700 | 9.0% | 0.703 | 0.494 |
+| Face half-occluded | 0.699 | 9.1% | 0.712 | 0.533 |
+| 50% of words dropped | 0.769 | 0.0% | 0.766 | 0.735 |
+| Camera off | 0.594 | 22.8% | 0.609 | 0.534 |
+| Microphone off | 0.613 | 20.3% | 0.615 | 0.560 |
+| Noisy room + camera off | 0.464 | 39.6% | 0.486 | 0.081 |
+
+*Macro-F1, mean of 5 folds. Drop is relative to clean input.*
+
+- Every corruption stays within the 10% target (NFR-04). Removing a whole strong modality does
+  not: with the camera off RAMEI falls to the audio-only level (0.594 vs 0.592). It degrades
+  gracefully to what the remaining signals can support.
+- Training on corrupted and missing inputs is what makes the model robust. The same
+  architecture trained on clean data only (E10) collapses in a noisy room (0.384) and with
+  noise plus camera off (0.081).
+
+### What the reliability module adds
+
+The ablation without the reliability bias (E9) matches the full model in all twelve scenarios,
+so the bias in the fusion attention adds no measurable accuracy on this dataset.
+
+The reliability estimates themselves behave as designed: voice reliability falls from 0.60 to
+0.48 in a noisy room, and face reliability from 0.73 to 0.61-0.63 when the face is dark or
+occluded. On average, though, the fusion weights barely move, because the model already puts
+about 84% of its weight on the acted, frontal faces of CREMA-D.
+
+Reliability remains useful in three ways:
+
+- It drives the explanations shown to users.
+- It feeds the abstention and conflict rules.
+- It adapts per segment: in the end-to-end check, a segment whose face reliability fell to
+  0.43 had its weight split 51/49 between face and voice instead of ~98% face.
+
+The outcome is recorded in ADR-0001. Testing the bias where no modality dominates is future
+work.
+
+### Calibration and abstention
+
+| Scenario | ECE | Abstained | Accuracy when committed | Accuracy of abstained |
+|---|---|---|---|---|
+| Clean | 0.044 | 4.2% | 78.6% | 37.3% |
+| Noisy room 0 dB | 0.057 | 7.2% | 74.3% | 37.6% |
+| Face dark | 0.045 | 7.5% | 72.7% | 35.4% |
+| Camera off | 0.057 | 27.7% | 67.4% | 39.5% |
+| Noisy room + camera off | 0.043 | 45.8% | 58.1% | 35.3% |
+
+*Abstention threshold: calibrated confidence 0.45.*
+
+Calibration meets the ≤ 0.05 target (NFR-05) on clean input and most corruptions, is within
+0.007 of it under heavy noise or with the camera off, and misses when a single modality must
+decide alone (microphone off 0.087, face only 0.100). Abstention behaves as intended: the
+model abstains more as conditions worsen, and what it abstains on is far less likely to be
+right.
+
+### Fairness
+
+| Scenario | Female | Male | Gap (points) |
+|---|---|---|---|
+| Clean | 0.796 | 0.745 | 5.1 |
+| Noisy room 0 dB | 0.736 | 0.697 | 3.9 |
+| Face dark | 0.716 | 0.683 | 3.3 |
+| Camera off | 0.596 | 0.593 | 0.2 |
+
+The gender gap is borderline on clean input (target ≤ 5 points, NFR-09) and within target
+elsewhere. It vanishes without the face, which points to the face-expression encoder as its
+source.
+
+Per-class F1 on clean input: happy 0.92, angry 0.85, neutral 0.78, disgust 0.76, fear 0.68,
+sad 0.63. Most errors are confusions among the low-arousal negative emotions (sad, fear,
+disgust).
 
 ## 5.4 Platform performance
 
-[PENDING: API load test on an idle machine: throughput, p50/p95/p99 latency, error rate]
+**API (web tier).** The table shows the four read endpoints under concurrent authenticated
+users, measured on the development laptop with the load generator running on the same
+machine. There were no errors at any level.
 
-[PENDING M2: per-segment inference latency on the RTX 3050 (GPU) and on CPU versus NFR-01]
+| Concurrent users | Throughput | p50 | p95 | p99 |
+|---|---|---|---|---|
+| 1 | 90 req/s | 10 ms | 18 ms | 22 ms |
+| 10 | 105 req/s | 48 ms | 219 ms | 686 ms |
+| 50 | 78 req/s | 475 ms | 1.77 s | 2.65 s |
+
+A single server process handles interactive use comfortably. At 50 concurrent users requests
+queue; scaling out means more API processes once inference moves to separate workers
+(ADR-0008). Repeated runs varied by up to 2× on this laptop, so these are indicative figures.
+
+**Inference.** On the RTX 3050, a 17-second three-modality video was analysed end to end
+(decoding, segmentation, speech recognition, three encoders, fusion) in 4.2 s with models
+loaded: about 1.4 s per 5-6-second segment, or 4× faster than real time. A cold start
+including model loading took 38 s. Live-mode latency per 3-second window (NFR-01) and CPU-only
+inference were not benchmarked separately.
 
 # 6. Requirements traceability
 
@@ -365,6 +470,11 @@ the corrupted modality]
   IEMOCAP or MSP-Podcast (license required) would provide a fairer test.
 - **Small speaker pools.** Fold-to-fold variance is 3-8 F1 points. Single-split numbers are
   unreliable, which is why everything is cross-validated.
+- **The reliability bias did not earn its place on CREMA-D.** Robustness came from training on
+  corrupted inputs, and the face dominates this dataset. Whether explicit reliability gating
+  helps on natural conversations is untested.
+- **Missing a whole modality costs 20-23 points**, back to the single-modality level.
+  Calibration also misses its target when one modality must decide alone.
 - **Valence and arousal** are derived from class probabilities, not regressed against labels.
 - **Local-first implementation choices** (ADR-0008) are adequate for a demo, not for
   multi-tenant production. The Docker images have not been built on the development machine.
@@ -376,8 +486,11 @@ the corrupted modality]
 # 8. Conclusion and future work
 
 The project replaced an audio-only, leakage-inflated baseline with an honestly evaluated,
-reliability-aware multimodal system and a working platform around it.
-[PENDING M2: one-sentence fusion outcome.]
+reliability-aware multimodal system and a working platform around it. Fusing voice, words
+and face lifts macro-F1 to 0.769 on unseen speakers, 17.7 points above audio alone. The system
+holds within 10% under every tested corruption, is calibrated to an ECE of 0.044, and abstains
+rather than guesses when its inputs are poor. The ablations also show that most of this
+robustness comes from how the model is trained rather than from the reliability bias.
 
 Future work:
 

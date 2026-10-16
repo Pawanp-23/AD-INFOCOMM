@@ -1,9 +1,9 @@
 # RAMEI — Reliability-Aware Adaptive Multimodal Emotion Intelligence
 
 RAMEI recognizes human emotion from **voice, words and face** together, estimates **how
-reliable each signal is** for every moment, and **adaptively shifts trust** toward the
-reliable ones. Every prediction comes with a calibrated confidence, an "uncertain" option
-instead of guessing, and an explanation of why.
+reliable each signal is** for every moment, and **keeps working when signals are noisy,
+degraded or missing**. Every prediction comes with a calibrated confidence, an "uncertain"
+option instead of guessing, and an explanation of why.
 
 > AD-INFOCOMM internship project. Evolves a single-modal (audio-only) speech emotion
 > recognition baseline into a multimodal system with a web platform.
@@ -16,7 +16,9 @@ instead of guessing, and an explanation of why.
 | 2 | [Technical Requirements (TRD)](docs/02-TRD.md) | Models, data, APIs, database, performance, security, testing |
 | 3 | [System Architecture](docs/03-System-Architecture.md) | How the components fit together, runtime flows, deployment |
 | — | [Architecture Decision Records](docs/adr/) | Why key decisions were made (incl. [ADR-0008](docs/adr/0008-local-first-implementation-choices.md) on implementation choices) |
-| — | [Milestone reports](docs/reports/) | Results of each phase |
+| — | [Milestone reports](docs/reports/) | Results of each phase (M0 baseline, M1 branches, M2 fusion) |
+| — | [Final report](docs/reports/Final-Report.md) | The whole project in one document (Word version built by `scripts/report`) |
+| — | [Demo runbook](docs/demo/Demo-Script.md) | Demo preparation, 6-minute video script, likely questions |
 
 ## Architecture at a glance
 
@@ -34,12 +36,13 @@ instead of guessing, and an explanation of why.
 
 | Folder | Contents |
 |---|---|
-| [`docs/`](docs/) | PRD, TRD, architecture, ADRs, milestone reports |
+| [`docs/`](docs/) | PRD, TRD, architecture, ADRs, milestone and final reports, demo runbook |
 | [`frontend/`](frontend/) | React + Vite + TypeScript dashboard |
 | [`backend/`](backend/) | FastAPI service, inference engine, analysis pipeline |
-| [`database/`](database/) | Reference schema, migrations, seeds |
-| [`ml/`](ml/) | Data pipelines, models, training, evaluation, bundle export |
-| [`infra/`](infra/) | Dockerfiles, reverse proxy, monitoring (production path) |
+| [`database/`](database/) | Reference schema |
+| [`ml/`](ml/) | Data pipelines, models, training, fusion, evaluation, bundle export |
+| [`infra/`](infra/) | Dockerfiles and nginx config; [`docker-compose.yml`](docker-compose.yml) runs the stack |
+| [`scripts/`](scripts/) | API load test, demo-clip generator, Word report builder |
 
 ## Run locally (Windows / macOS / Linux, no Docker needed)
 
@@ -57,7 +60,7 @@ pip install -e "../backend[dev,inference]"
 # 2. Model bundle (trains on CREMA-D; see ml/README.md and docs/reports for details)
 python scripts/download_crema_d.py && python scripts/download_crema_d_video.py
 python -m ramei_ml.training.text_branch
-python scripts/run_m2.py           # features -> cross-validation -> bundle
+python scripts/run_m2.py           # features -> cross-validation -> bundle (~6 h on an RTX 3050, resumable)
 
 # 3. Create a user (password is written to backend/.dev-credentials, git-ignored)
 cd ../backend
@@ -70,14 +73,25 @@ uvicorn app.main:app --port 8000
 cd ../frontend && npm install && npm run dev
 ```
 
-## Results so far
+## Run with Docker (alternative)
+
+```bash
+cp .env.example .env               # set JWT_SECRET to 32+ random characters
+docker compose up --build          # dashboard + API on http://localhost:8080
+docker compose exec api python -m app.cli create-user --email admin@ramei.local --role admin
+```
+
+The model bundle is mounted read-only from `ml/artifacts/bundles`. See [infra/](infra/).
+
+## Results
 
 | Model | Data | Macro-F1 | Notes |
 |---|---|---|---|
 | Thesis baseline (MFCC + MLP) | RAVDESS, 6-fold speaker CV | 0.512 ± 0.076 | [M0 report](docs/reports/M0-baseline-report.md) |
 | Audio branch (WavLM + LoRA) | RAVDESS, 6-fold speaker CV | 0.686 ± 0.028 | [M1 report](docs/reports/M1-unimodal-report.md) |
 | Text branch (DeBERTa-v3 + LoRA) | MELD test | 0.448 (weighted-F1 0.591) | [M1 report](docs/reports/M1-unimodal-report.md) |
-| RAMEI fusion | CREMA-D, 5-fold speaker CV | see [M2 report](docs/reports/M2-fusion-report.md) | robustness under noise / missing modalities |
+| Audio branch alone (frozen WavLM) | CREMA-D, 5-fold speaker CV | 0.592 ± 0.033 | 6 classes (no surprise in CREMA-D) |
+| **RAMEI fusion (voice + words + face)** | CREMA-D, 5-fold speaker CV | **0.769 ± 0.023** | ECE 0.044; ≤ 10% drop under every corruption — [M2 report](docs/reports/M2-fusion-report.md) |
 
 ## Conventions
 
