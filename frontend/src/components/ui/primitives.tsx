@@ -62,12 +62,13 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={clsx("flex items-start justify-between gap-4 border-b border-border px-4 py-3", className)}>
+    <div className={clsx("flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-3", className)}>
       <div className="min-w-0">
         <h2 className="text-sm font-semibold text-fg">{title}</h2>
         {description && <p className="mt-0.5 text-xs text-muted">{description}</p>}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {/* Wraps below the title on narrow screens; max-w-full lets wide actions (legends) wrap too. */}
+      {action && <div className="max-w-full shrink-0">{action}</div>}
     </div>
   );
 }
