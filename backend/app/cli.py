@@ -3,12 +3,15 @@
     python -m app.cli create-user --email admin@ramei.local --role admin --name "RAMEI Admin"
 
 A random password is generated (unless --password is given) and written to
-backend/.dev-credentials (git-ignored) — never printed into logs or committed.
+backend/.dev-credentials (git-ignored; override with RAMEI_CREDENTIALS_FILE) — never printed
+into logs or committed.
 """
 
 import argparse
+import os
 import secrets
 import string
+from pathlib import Path
 
 from sqlalchemy import select
 
@@ -17,7 +20,9 @@ from app.core.security import hash_password
 from app.db.models import Organization, User
 from app.db.session import SessionLocal, init_db
 
-CREDENTIALS_FILE = BACKEND_ROOT / ".dev-credentials"
+CREDENTIALS_FILE = Path(
+    os.environ.get("RAMEI_CREDENTIALS_FILE") or BACKEND_ROOT / ".dev-credentials"
+)
 
 
 def generate_password(n: int = 16) -> str:

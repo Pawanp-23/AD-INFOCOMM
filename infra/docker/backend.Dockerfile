@@ -9,30 +9,36 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HF_HOME=/var/cache/huggingface
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends libsndfile1 libgl1 libglib2.0-0 \
+ && apt-get install -y --no-install-recommends libsndfile1 libgl1 libglib2.0-0 libegl1 libgles2 \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /srv/ramei
 RUN pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 
-# Dependencies first (cached layer), then sources.
+# torch above is its own cached layer; the packages below reinstall when sources change.
 COPY ml/pyproject.toml ml/pyproject.toml
 COPY backend/pyproject.toml backend/pyproject.toml
 COPY ml/src ml/src
 COPY backend/app backend/app
 RUN pip install "./ml[multimodal]" "./backend[inference,postgres,llm]"
 
-RUN useradd --system --uid 10001 ramei \
+# Non-root user with a real home: libraries cache there (matplotlib, torch hub), and numba
+# must not write next to its read-only sources in site-packages.
+RUN useradd --system --uid 10001 --create-home --home-dir /home/ramei ramei \
  && mkdir -p /srv/ramei/backend/uploads /srv/ramei/data "$HF_HOME" \
  && chown -R ramei /srv/ramei/backend/uploads /srv/ramei/data "$HF_HOME"
 USER ramei
+ENV HOME=/home/ramei \
+    NUMBA_CACHE_DIR=/home/ramei/.cache/numba
 
 WORKDIR /srv/ramei/backend
 ENV APP_ENV=production \
     DATABASE_URL=sqlite:////srv/ramei/data/ramei.db \
     MODEL_BUNDLE_DIR=/srv/ramei/bundles \
     UPLOAD_DIR=/srv/ramei/backend/uploads \
-    INFERENCE_DEVICE=cpu
+    INFERENCE_DEVICE=cpu \
+    RAMEI_ML_ROOT=/srv/ramei/data/ml \
+    RAMEI_CREDENTIALS_FILE=/srv/ramei/data/.credentials
 
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s \

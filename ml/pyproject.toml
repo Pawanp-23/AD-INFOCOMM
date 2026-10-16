@@ -25,6 +25,8 @@ audio = ["transformers>=4.44", "peft>=0.12"]
 multimodal = [
     "transformers>=4.44",
     "peft>=0.12",
+    "sentencepiece>=0.2",  # DeBERTa-v3 tokenizer (text branch)
+    "protobuf>=4.25",      # needed alongside sentencepiece to load that tokenizer
     "faster-whisper>=1.0",
     "mediapipe>=0.10",
 ]

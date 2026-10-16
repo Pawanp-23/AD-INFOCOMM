@@ -100,3 +100,18 @@ def test_crema_d_scan_reads_genders_from_demographics(tmp_path: Path) -> None:
     assert set(records) == {"crema_d:1001", "crema_d:1002"}  # CAL is not a CREMA-D emotion
     assert records["crema_d:1001"].gender == "male"
     assert records["crema_d:1002"].gender == "female"
+
+
+def test_ml_root_can_be_overridden_for_containers(tmp_path, monkeypatch) -> None:
+    import importlib
+
+    import ramei_ml.paths as paths
+
+    monkeypatch.setenv("RAMEI_ML_ROOT", str(tmp_path))
+    try:
+        reloaded = importlib.reload(paths)
+        assert reloaded.ML_ROOT == tmp_path
+        assert reloaded.DATA_DIR == tmp_path / "data"
+    finally:
+        monkeypatch.delenv("RAMEI_ML_ROOT")
+        importlib.reload(paths)

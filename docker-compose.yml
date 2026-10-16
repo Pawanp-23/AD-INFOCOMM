@@ -18,8 +18,11 @@ services:
       dockerfile: infra/docker/backend.Dockerfile
     env_file: .env
     environment:
+      # These win over .env, whose paths are written for running on the host.
       APP_ENV: ${APP_ENV_CONTAINER:-production}
       CORS_ORIGINS: '["http://localhost:8080"]'
+      MODEL_BUNDLE_DIR: /srv/ramei/bundles
+      UPLOAD_DIR: /srv/ramei/backend/uploads
     volumes:
       - ./ml/artifacts/bundles:/srv/ramei/bundles:ro
       - apidata:/srv/ramei/data
