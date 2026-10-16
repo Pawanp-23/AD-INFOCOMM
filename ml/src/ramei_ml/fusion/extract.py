@@ -84,11 +84,21 @@ def extract_asr(clips: pd.DataFrame) -> None:
     from ramei_ml.features.asr import Transcriber
 
     out = STORE / "transcripts.csv"
+    partial = STORE / "transcripts.partial.csv"
     transcriber = Transcriber(
         "small.en", device=DEVICE, compute_type="float16" if DEVICE == "cuda" else "int8"
     )
+    STORE.mkdir(parents=True, exist_ok=True)
+    # Resume from the last checkpoint: ASR is the slowest step and must survive interruptions.
     rows = []
+    if partial.exists():
+        rows = pd.read_csv(partial, keep_default_na=False).to_dict("records")
+    done = len({r["stem"] for r in rows})
+    if done:
+        print(f"  asr: resuming at {done}/{len(clips)}", flush=True)
     for i, path in enumerate(clips["path"]):
+        if i < done:
+            continue
         y = load_audio(path, AudioConfig())
         for variant, snr in (("asr_clean", None), ("asr_snr0", 0.0)):
             t = transcriber.transcribe(noisy(y, snr, seed=i))
@@ -104,9 +114,10 @@ def extract_asr(clips: pd.DataFrame) -> None:
                 }
             )
         if (i + 1) % 500 == 0:
+            pd.DataFrame(rows).to_csv(partial, index=False)
             print(f"  asr: {i + 1}/{len(clips)}", flush=True)
-    STORE.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(out, index=False)
+    partial.unlink(missing_ok=True)
     print(f"saved {out}", flush=True)
 
 
