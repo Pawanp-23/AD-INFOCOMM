@@ -54,7 +54,7 @@ jobs:
       - run: pytest -q
 
   frontend:
-    name: Frontend — type-check, test & build
+    name: Frontend â€” type-check, test & build
     runs-on: ubuntu-latest
     defaults:
       run:
