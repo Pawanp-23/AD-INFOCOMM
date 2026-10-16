@@ -89,3 +89,24 @@ def test_corruptions_degrade_signals() -> None:
     assert darken_faces(crops).mean() < crops.mean() * 0.3
     assert (occlude_faces(crops, rng) != crops).any()
     assert len(drop_words("a b c d e f g h i j", 0.5, rng).split()) < 10
+
+
+def test_aggregate_tolerates_metrics_missing_in_some_folds() -> None:
+    from ramei_ml.fusion.data import SCENARIOS
+    from ramei_ml.fusion.train import aggregate
+
+    def fold(f1: float, with_visual: bool) -> dict:
+        entry = {
+            "macro_f1": f1,
+            "reliability": {"audio": 0.8, "text": 0.5, "visual": 0.7},
+            "weights": {"audio": 0.5, "text": 0.2, "visual": 0.3},
+        }
+        if with_visual:
+            entry["branch_visual"] = 0.6
+        return {s: dict(entry) for s in SCENARIOS}
+
+    summary = aggregate([fold(0.7, True), fold(0.8, False)])
+    clean = summary["clean"]
+    assert clean["macro_f1"] == {"mean": 0.75, "std": 0.05, "n_folds": 2}
+    assert clean["branch_visual"]["n_folds"] == 1
+    assert clean["weights"]["audio"] == 0.5

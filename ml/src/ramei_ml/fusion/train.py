@@ -160,10 +160,12 @@ def evaluate(
             entry["e5_static"] = float(f1_score(y, static.argmax(1), average="macro"))
             entry["e6_rel_late"] = float(f1_score(y, rel_late.argmax(1), average="macro"))
             for k, m in enumerate(MODALITIES):
-                if r["avail"][:, k].all():
+                has = r["avail"][:, k].astype(bool)
+                if has.any():  # branch-only score on the clips where that modality exists
                     entry[f"branch_{m}"] = float(
-                        f1_score(y, probs[:, k].argmax(1), average="macro")
+                        f1_score(y[has], probs[has, k].argmax(1), average="macro")
                     )
+                    entry[f"coverage_{m}"] = float(has.mean())
         results[scenario] = entry
     return results
 
@@ -171,14 +173,16 @@ def evaluate(
 def aggregate(folds: list[dict]) -> dict[str, Any]:
     summary: dict[str, Any] = {}
     for scenario in SCENARIOS:
-        keys = [k for k, v in folds[0][scenario].items() if isinstance(v, float)]
-        summary[scenario] = {
-            k: {
-                "mean": round(float(np.mean([f[scenario][k] for f in folds])), 4),
-                "std": round(float(np.std([f[scenario][k] for f in folds])), 4),
+        # Union of metric keys: some (e.g. branch-only scores) can be absent in a fold.
+        keys = sorted({k for f in folds for k, v in f[scenario].items() if isinstance(v, float)})
+        summary[scenario] = {}
+        for k in keys:
+            vals = [f[scenario][k] for f in folds if k in f[scenario]]
+            summary[scenario][k] = {
+                "mean": round(float(np.mean(vals)), 4),
+                "std": round(float(np.std(vals)), 4),
+                "n_folds": len(vals),
             }
-            for k in keys
-        }
         for k in ("reliability", "weights"):
             summary[scenario][k] = {
                 m: round(float(np.mean([f[scenario][k][m] for f in folds])), 4) for m in MODALITIES
