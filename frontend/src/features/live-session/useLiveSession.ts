@@ -6,16 +6,8 @@ import type { Alert, Segment } from "@/types/api";
 export type LiveState = "idle" | "requesting" | "connecting" | "loading_models" | "live" | "stopping" | "ended" | "error";
 
 // AudioWorklet: forwards 128-sample frames from the mic to the main thread.
-const WORKLET = `
-class Tap extends AudioWorkletProcessor {
-  process(inputs) {
-    const ch = inputs[0] && inputs[0][0];
-    if (ch) this.port.postMessage(ch.slice(0));
-    return true;
-  }
-}
-registerProcessor("ramei-tap", Tap);
-`;
+// Same-origin file in public/ (a blob: URL would need a weaker CSP).
+const WORKLET_URL = "/audio-tap-worklet.js";
 const SAMPLE_RATE = 16_000;
 const CHUNK = 4_000; // 250 ms of audio per message
 const FPS = 6;
@@ -113,7 +105,7 @@ export function useLiveSession() {
         // Audio: AudioContext at 16 kHz resamples the microphone for us.
         const audio = new AudioContext({ sampleRate: SAMPLE_RATE });
         ctx.current = audio;
-        await audio.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type: "application/javascript" })));
+        await audio.audioWorklet.addModule(WORKLET_URL);
         const src = audio.createMediaStreamSource(m);
         const tap = new AudioWorkletNode(audio, "ramei-tap");
         let buf = new Float32Array(0);
