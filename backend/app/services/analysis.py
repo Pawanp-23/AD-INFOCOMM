@@ -19,6 +19,7 @@ from app.db.session import SessionLocal
 from app.inference.engine import InferenceEngine, SegmentInput
 from app.pipeline import media
 from app.services.insights import build_summary, compute_alerts
+from app.services.narrative import add_narrative
 
 log = logging.getLogger("ramei.analysis")
 _jobs: dict[str, threading.Thread] = {}
@@ -63,7 +64,7 @@ def finalize(session_id: str) -> None:
             db.add(Alert(session_id=session_id, **a))
         used = sorted({m for s in segs for m, i in s["modalities"].items() if i["available"]})
         session.modalities_used = used
-        session.summary = build_summary(segs, alerts)
+        session.summary = add_narrative(build_summary(segs, alerts), alerts)
         session.status, session.progress = "completed", 100
         session.completed_at = datetime.now(UTC)
         if segs:

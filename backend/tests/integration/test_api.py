@@ -100,3 +100,10 @@ def test_password_is_hashed_with_argon2(client: TestClient) -> None:
     with SessionLocal() as db:
         u = db.scalar(select(User).where(User.email == "admin@test.io"))
     assert u.password_hash.startswith("$argon2id$") and PASSWORD not in u.password_hash
+
+
+def test_security_headers(client: TestClient) -> None:
+    r = client.get("/api/v1/health")
+    assert r.headers["X-Content-Type-Options"] == "nosniff"
+    assert r.headers["X-Frame-Options"] == "DENY"
+    assert r.headers["Cache-Control"] == "no-store"

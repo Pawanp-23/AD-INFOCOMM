@@ -53,6 +53,10 @@ export interface SessionSummary {
   trend?: "improving" | "worsening" | "stable";
   mean_valence?: number;
   mean_reliability?: Record<Modality, number>;
+  /** LLM-written note when a provider is configured; otherwise equals the headline. */
+  narrative?: string;
+  /** "rules" or the model id that wrote the narrative. */
+  narrative_source?: string;
 }
 
 export interface AnalysisSession {

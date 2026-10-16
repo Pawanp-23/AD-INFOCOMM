@@ -37,10 +37,19 @@ class Settings(BaseSettings):
     inference_device: str = "auto"  # auto | cpu | cuda
     load_models_on_startup: bool = False  # models load lazily on first analysis
 
+    # Optional LLM narrative on top of the rule-based summary (off by default, ADR-0008)
+    llm_provider: str = ""  # "" | "anthropic"
+    llm_model: str = "claude-opus-5-5"
+    llm_api_key: str = ""
+    llm_timeout_s: float = 20.0
+
 
 @lru_cache
 def get_settings() -> Settings:
     settings = Settings()
-    if settings.app_env != "local" and settings.jwt_secret == "dev-only-change-me":  # noqa: S105
-        raise RuntimeError("Set JWT_SECRET to a long random value outside local development")
+    placeholders = {"dev-only-change-me", "generate-a-long-random-string"}
+    if settings.app_env != "local" and (
+        settings.jwt_secret in placeholders or len(settings.jwt_secret) < 32
+    ):
+        raise RuntimeError("Set JWT_SECRET to a random value of 32+ characters outside local")
     return settings

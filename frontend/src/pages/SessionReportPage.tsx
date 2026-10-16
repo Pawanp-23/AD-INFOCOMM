@@ -150,14 +150,22 @@ export function SessionReportPage() {
                 </div>
                 <p className="mt-2 text-sm text-muted">{summary.headline}</p>
               </div>
-              <ul className="space-y-1.5 text-sm">
+              <div>
+                {summary.narrative && summary.narrative_source && summary.narrative_source !== "rules" && (
+                  <p className="mb-3 text-sm">
+                    {summary.narrative}
+                    <span className="ml-2 text-xs text-faint">AI-written from session statistics</span>
+                  </p>
+                )}
+                <ul className="space-y-1.5 text-sm">
                 {summary.points.map((p) => (
                   <li key={p} className="flex gap-2">
                     <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-faint" aria-hidden />
                     {p}
                   </li>
                 ))}
-              </ul>
+                </ul>
+              </div>
             </div>
           </Card>
         )}
