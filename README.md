@@ -79,9 +79,12 @@ cd ../frontend && npm install && npm run dev
 cp .env.example .env               # set JWT_SECRET to 32+ random characters
 docker compose up --build          # dashboard + API on http://localhost:8080
 docker compose exec api python -m app.cli create-user --email admin@ramei.local --role admin
+docker compose exec api cat /srv/ramei/data/.credentials     # the generated password
 ```
 
-The model bundle is mounted read-only from `ml/artifacts/bundles`. See [infra/](infra/).
+The model bundle is mounted read-only from `ml/artifacts/bundles`. Inference runs on CPU in the
+container; the first analysis downloads the encoder models (~2 GB) into a cache volume.
+Verified with Docker Desktop 4.95 on Windows 11. See [infra/](infra/).
 
 ## Results
 

@@ -267,6 +267,14 @@ the dashboard (nginx). nginx serves the single-page app and proxies `/api`, incl
 WebSocket upgrades. A Compose file wires the stack together, with PostgreSQL as an optional
 profile.
 
+The stack was built and run under Docker Desktop on the development laptop. Through nginx,
+the containerized API analysed the end-to-end test video on CPU in 14 s (warm), produced the
+same results as the GPU run, and served the live-stream WebSocket. Running it surfaced and
+fixed six deployment defects that the local setup had hidden: undeclared tokenizer
+dependencies, missing graphics libraries for face detection, cache and data paths that were
+not writable by the non-root user, host paths leaking into the container, security headers
+not applied to dashboard pages, and an inline script blocked by the content security policy.
+
 Development used a local-first setup recorded in ADR-0008: SQLite in place of PostgreSQL,
 in-process workers in place of Celery, and PyTorch in place of ONNX serving. Each of these
 keeps the same interfaces, so the production path stays open.
@@ -477,7 +485,8 @@ inference were not benchmarked separately.
   Calibration also misses its target when one modality must decide alone.
 - **Valence and arousal** are derived from class probabilities, not regressed against labels.
 - **Local-first implementation choices** (ADR-0008) are adequate for a demo, not for
-  multi-tenant production. The Docker images have not been built on the development machine.
+  multi-tenant production. The container stack has run on one machine only, without TLS or
+  PostgreSQL, and the API image runs inference on CPU.
 - **Ethics.** Emotion recognition is probabilistic and culturally variable. RAMEI must not be
   used to make decisions about individuals (hiring, discipline, diagnosis) or to monitor people
   without their consent. The system defaults to recording consent, deleting raw media after
